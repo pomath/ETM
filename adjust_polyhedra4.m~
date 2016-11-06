@@ -1,0 +1,88 @@
+% DDG: 12/06/2016
+% script para ajustar la marea terrestre utilizando el ETM y series de
+% tiempo GPS. Algunos comentarios están en inglés porque los archivos
+% provienen de scripts que vengo escribiendo para la doctorado.
+
+clc
+clear all
+
+% load the time series
+[poly,st_series] = load_polyhedra();
+
+% rm_stn = [];
+% for i = 1:size(st_series,2)
+%     if size(st_series(i).epochs,2) < 50 | (max(st_series(2).epochs) - min(st_series(2).epochs)) < 1
+%         rm_stn = [rm_stn; st_series(i).stnm];
+%     end
+% end
+
+% for i = 1:size(rm_stn,1)
+%     [poly,st_series] = remove_stn(rm_stn(i,:), poly,st_series);
+% end
+
+% [poly,st_series] = remove_stn('CORD', poly,st_series);
+% [poly,st_series] = remove_stn('ACPM', poly,st_series);
+% [poly,st_series] = remove_stn('CFAG', poly,st_series);
+% [poly,st_series] = remove_stn('EMAK', poly,st_series);
+% [poly,st_series] = remove_stn('EPRF', poly,st_series);
+% [poly,st_series] = remove_stn('GAS1', poly,st_series);
+% [poly,st_series] = remove_stn('IGM0', poly,st_series);
+% [poly,st_series] = remove_stn('UCOR', poly,st_series);
+% [poly,st_series] = remove_stn('BUE2', poly,st_series);
+% [poly,st_series] = remove_stn('FEDE', poly,st_series);
+% [poly,st_series] = remove_stn('ARCO', poly,st_series);
+% [poly,st_series] = remove_stn('LNDS', poly,st_series);
+% [poly,st_series] = remove_stn('ELA2', poly,st_series);
+% [poly,st_series] = remove_stn('RMLS', poly,st_series);
+% [poly,st_series] = remove_stn('JVGO', poly,st_series);
+% [poly,st_series] = remove_stn('DORE', poly,st_series);
+% [poly,st_series] = remove_stn('MZAL', poly,st_series);
+% [poly,st_series] = remove_stn('MZGA', poly,st_series);
+% [poly,st_series] = remove_stn('PATA', poly,st_series);
+% [poly,st_series] = remove_stn('PDE3', poly,st_series);
+% [poly,st_series] = remove_stn('PECL', poly,st_series);
+% [poly,st_series] = remove_stn('PHDP', poly,st_series);
+% [poly,st_series] = remove_stn('RECO', poly,st_series);
+% [poly,st_series] = remove_stn('RSCL', poly,st_series);
+% [poly,st_series] = remove_stn('RUFI', poly,st_series);
+% [poly,st_series] = remove_stn('RWSN', poly,st_series);
+% [poly,st_series] = remove_stn('SCLA', poly,st_series);
+% [poly,st_series] = remove_stn('SOLD', poly,st_series);
+% [poly,st_series] = remove_stn('SURY', poly,st_series);
+% [poly,st_series] = remove_stn('TAVA', poly,st_series);
+% [poly,st_series] = remove_stn('TILC', poly,st_series);
+% [poly,st_series] = remove_stn('TMCO', poly,st_series);
+% [poly,st_series] = remove_stn('VIMA', poly,st_series);
+% [poly,st_series] = remove_stn('i5MA', poly,st_series);
+% [poly,st_series] = remove_stn('iARO', poly,st_series);
+% [poly,st_series] = remove_stn('EISL', poly,st_series);
+% [poly,st_series] = remove_stn('ESCA', poly,st_series);
+% [poly,st_series] = remove_stn('CMPN', poly,st_series);
+% [poly,st_series] = remove_stn('LLFN', poly,st_series);
+% [poly,st_series] = remove_stn('YEMA', poly,st_series);
+% [poly,st_series] = remove_stn('DUAO', poly,st_series);
+% [poly,st_series] = remove_stn('CAUQ', poly,st_series);
+% [poly,st_series] = remove_stn('NIHU', poly,st_series);
+% [poly,st_series] = remove_stn('GRLS', poly,st_series);
+
+% load the station info
+% el station info se usa para agregar saltos por cambios de equipo, antena,
+% etc.
+st_info = load_st_info('/home/pmatheny/scot/tables/station.info');
+
+% fit etms and filter large outliers
+% primera corrida de auto_fit_xyz busca datos que estén por afuera de 3
+% sigma y los descarta para no deformar mucho la red durante el ajuste
+[etm, index, weights] = auto_fit_xyz(st_series,st_info);
+
+% actualizo las series de tiempo sacando las colas estadisticas
+st_series = update_st_series(st_series,index,weights);
+
+[st_series, etm] = helmert_tides(st_series, poly, st_info, etm, 4);
+
+plot_etms(st_series, etm)
+
+save('st_series/st_series.mat','st_series');
+save('st_series/etm.mat','etm');
+save('st_series/poly.mat','poly');
+
