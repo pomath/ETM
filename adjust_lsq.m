@@ -1,4 +1,4 @@
-function [C, S, So, V, r, dof, cst_pass] = adjust_lsq(Ai,Pi,Li,index)
+function [C, S, So, V, r, dof, cst_pass] = adjust_lsq(Ai,Pi,Li,index, constrains)
 
     % select the rows that are not zero
     r = ~all(Ai == 0,2);
@@ -7,13 +7,20 @@ function [C, S, So, V, r, dof, cst_pass] = adjust_lsq(Ai,Pi,Li,index)
     A = Ai(r & index,:);
     L = Li(r & index);
     P = Pi(r & index,r & index);
-
+    
+    % to stabilize the inversion
+    sc = size(constrains,1);
+    A = [A; constrains];
+    L = [L; zeros(sc,1)];
+    sp = size(P,1);
+    for i=1:sc
+        P(sp+i,sp+i) = 1;
+    end
     % invert for the parameters
     C = (A'*P*A)\A'*P*L;
 
     % use the input A to get the information about outliers too
     V = Li - Ai*C;
-
     %%%%%%%%%%%% statistics %%%%%%%%%
     S = inv(A'*P*A);
 
