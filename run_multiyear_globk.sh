@@ -1,11 +1,12 @@
 #!/bin/bash
 year=$1
+EXPT="scot"
 rm -rf globk_run
 mkdir globk_run
 hfiles=''
 for yr in $year
   do
-  hfiles+="`find ${yr}/${yr}_??? -type f -name 'hscot*'` "
+  hfiles+="`find ${yr}/${yr}_??? -type f -name "h${EXPT}*"` "
 done
 
 for file in $hfiles
@@ -29,7 +30,7 @@ cp ../*comb.cmd gsoln/
 start_day=${hfiles: 23:3}
 end_day=${hfiles: -4:3}
 echo ${year: 0:4} $start_day ${year: -4:4} $end_day
-sh_glred -expt scot -s ${year: 0:4} $start_day ${year: -4:4} $end_day -local -opt H G T >& sh_glred.log
+sh_glred -expt $EXPT -s ${year: 0:4} $start_day ${year: -4:4} $end_day -local -opt H G T >& sh_glred.log
 
 if [ "$?" == "1" ]; then
   echo "Error Running sh_glred"
@@ -40,7 +41,7 @@ if [ "$?" == "1" ]; then
   echo "Error Combining Files"
 fi
 
-##MAKE MATLAB FILE FOR DEMIANS CODE
+##MAKE MATLAB FILE FOR ETM CODE
 if [ ! -d "ts" ]
 then
   mkdir ts
