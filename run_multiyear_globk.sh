@@ -51,7 +51,7 @@ echo "Creating time series file (for Matlab)..."
 
 array=`find . -name '*.org' | sort`
 
-#This block adds duplicate entries.
+#This block adds duplicate entries. Might not work if no space between columns.
 for day in ${array}
   do
   grep ^pbo. ${array} | grep -v '*' | awk '{ print $2, $9, $10, $11, $12, $13, $14, $15, $27, $28, $29, $30, $31, $32}' >> ts/time_series.txt
