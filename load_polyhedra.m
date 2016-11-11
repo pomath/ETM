@@ -32,13 +32,13 @@ function [poly,st_series] = load_polyhedra()
     eesum = [];
     
     % load the time series files
-    files=dir('series/*.txt');
+    files=dir('../ETM_files/series/*.txt');
 
     ss=size(st_series,2);
     for i = 1:size(files,1)
         % los archivos de las series de tiempo son construidos por
         % make_data(v) v = version
-        fileID = fopen(['series/' files(i).name],'r');
+        fileID = fopen(['../ETM_files/series/' files(i).name],'r');
 
         disp(files(i).name)
         

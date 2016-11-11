@@ -1,5 +1,5 @@
 function [Xe,Ye,Ze] = get_coords_etm(st_series,etm,ts)
-% esta funcion calcula las coordenadas de las estaciones utilizando los
+% get_coords_etm calculates the ETM predicted coordinates (X,Y,Z) for stations in st_series
 % parámetros estimados del ETM
 %    
     Xe = nan(size(st_series,2),size(ts,1));

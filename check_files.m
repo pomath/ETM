@@ -4,7 +4,7 @@ function [] = check_files(stnm,st_info,lat,lon)
     % if the file does not exist,
     % create the file with the Maule event
     th = [];
-    if ~exist(['stations/H_' stnm '.txt'], 'file')
+    if ~exist(['../ETM_files/stations/H_' stnm '.txt'], 'file')
         % find the antenna changes in the station info file
         idx = structfind(st_info,'stnm',stnm);
         atx_H = [];
@@ -26,7 +26,7 @@ function [] = check_files(stnm,st_info,lat,lon)
         end
         
         % open the file of seismic events
-        fileID = fopen('seismic/events.csv','r');
+        fileID = fopen('../ETM_files/seismic/events.csv','r');
         % skip the header
         fgetl(fileID);
         events = textscan(fileID, '%s%f%f%f%s%s%f%f%f%s%s%s%s%q%s%s%s%s%s%s%s%s','delimiter',',');
@@ -97,7 +97,7 @@ function [] = check_files(stnm,st_info,lat,lon)
         %if distance(lat,lon,-36.14,-72.93)*pi/180*6371 <= 1500
         %    th = [atx_H; 2010 + 57/365 + 6/(24*365) + 34/(1440*8736) 1];
         %end
-        save(['stations/H_' stnm '.txt'], 'th','-ascii'); 
+        save(['../ETM_files/stations/H_' stnm '.txt'], 'th','-ascii'); 
     end
 
 end

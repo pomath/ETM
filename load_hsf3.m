@@ -5,7 +5,7 @@ function [A, Ha, constrains_h, constrains_s, adjcmp] = load_hsf3(stnm, t, invers
     if nargin > 3
         Ha = Hi;
     else
-        Ha = load(['stations/H_' stnm '.txt']);
+        Ha = load(['../ETM_files/stations/H_' stnm '.txt']);
     end
 
     [~,its] = min(t);

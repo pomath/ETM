@@ -7,8 +7,6 @@ function [etm, oindex, weights] = auto_fit_xyz(st_series,st_info,start_at)
     % weights for the GPS data
     weights = cell(size(st_series,2),1);
     
-    confidence = 0.05;
-    
     % station counter
     if nargin == 3
         i = structfind(st_series,'stnm',start_at);
@@ -22,9 +20,6 @@ function [etm, oindex, weights] = auto_fit_xyz(st_series,st_info,start_at)
 
         % read in antenna changes from station info and co-seismic jumps
         check_files(stnm, st_info, st_series(i).lat, st_series(i).lon);
-
-        % be aware of any outliers
-        index = st_series(i).index;
         
         % get the epochs for the current station
         t = (st_series(i).epochs)';
@@ -42,13 +37,12 @@ function [etm, oindex, weights] = auto_fit_xyz(st_series,st_info,start_at)
 
         % after taking to Mike, we don't need to use the formal errors from GAMIT, since they don't mean anything
         % so use unit weights and then update during iteration using sigma zero information
-        % DDG 10/11/2016: assign an a priori sigma for all observations
         px = ones(size(st_series(i).px));
         py = ones(size(st_series(i).px));
         pz = ones(size(st_series(i).px));
         
         % load the heavy-side functions and periodic terms
-        [A,Ha,constrains_h,constrains_s,adjcmp] = load_hsf3(stnm, t,true);
+        [A,Ha,constrains_h,constrains_s,~] = load_hsf3(stnm, t,true);
         
         if cond(A) > 1e3
             disp(['  >> Unstable system of equations for station: ' stnm '. It has been stabilized, but make sure to check the data and results.'])
@@ -66,98 +60,37 @@ function [etm, oindex, weights] = auto_fit_xyz(st_series,st_info,start_at)
                 
             % weights
             P = diag(1./p.^2);
-            factor = 1;
-            
-            % goodness of fit test
-            cst_pass = false;
+
             % print current component
             fprintf('[%i]',comp);
             
-            while ~cst_pass
-                % LSQ and goodness of fit adjustment
-                % if it doesn't pass, it rewights all the data and takes into account outliers
-                % it iterates until it test is ok.
-                % should include a max iter
-                
-                % constrains tells the LSQ where to put the conditions equations to limit the behavior of the log decays and
-                % the antenna and co-seismic jumps
-                [C, S, So, V, ~, dof, cst_pass] = adjust_lsq(A,P,L,index,constrains_h,constrains_s);
+            [C, S, So, V, ~, ~, cst_pass, p, index] = adjust_lsq(A,P,L,constrains_h,constrains_s);
 
-                % verify if the goodness of fit test was passed
-                if ~cst_pass
-                    if So < 1
-                        % weights are too pesimistic, just inform the user
-                        fprintf(char(hex2dec('25B2')));
-                    else
-                        % weights are too optimistic, just inform the user
-                        fprintf(char(hex2dec('25BC')));
-                    end
-                    
-                    factor = factor.*So;
-                    
-                    % determine the outliers
-                    [~,outliers]=deleteoutliers(V, confidence);
-                    % downweight them (x10)
-                    factor_outliers=ones(size(p));
-                    factor_outliers(outliers) = 10;
-                    % make the new P matrix
-                    P = diag(1./((factor.*factor_outliers).^2));
-                end
-                
-                % uncomment this block for debuging purposes
-%                 clf
-%                 scatter(t,L,30,abs(factor),'fill')
-%                 hold on
-%                 plot(t,A*C,'r')
-%                 colorbar
-%                 if ~isempty(outliers)
-%                    plot(t(outliers),L(outliers),'xr','MarkerSize',20)
-%                 end
+            if cst_pass
+                cst_pass = 'PASS';
+            else
+                cst_pass = 'NOT PASS';
             end
-
+            
             % update the information
             switch comp
                 case 1
-                    Cx = C; Sx = S; sox = So; Vx = V; Px = p.*factor.*factor_outliers;
+                    Cx = C; Sx = S; sox = So; Vx = V; Px = p; xresult = cst_pass;
                 case 2
-                    Cy = C; Sy = S; soy = So; Vy = V; Py = p.*factor.*factor_outliers;
+                    Cy = C; Sy = S; soy = So; Vy = V; Py = p; yresult = cst_pass;
                 case 3
-                    Cz = C; Sz = S; soz = So; Vz = V; Pz = p.*factor.*factor_outliers;
+                    Cz = C; Sz = S; soz = So; Vz = V; Pz = p; zresult = cst_pass;
             end
         end
-
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % goodness of fit test
-        % this is just to show the value of sigma zero after the test was passed
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-        xx = sox.^2.*dof;
-        xy = soy.^2.*dof;
-        xz = soz.^2.*dof;
-        % careful! This function returns the opposite value of alpha as on
-        % Leick, page 143
-        X1 = chi2inv(1-0.05/2,dof);
-        X2 = chi2inv(0.05/2,dof);
-
-        if xx < X2 || xx > X1; xresult = 'FAIL'; else xresult = 'PASS'; end
-        if xy < X2 || xy > X1; yresult = 'FAIL'; else yresult = 'PASS'; end
-        if xz < X2 || xz > X1; zresult = 'FAIL'; else zresult = 'PASS'; end
-
+        
         fprintf('\n');
-        disp([stnm ' sigma0_north = ' num2str(sox) ' sigma0_east = ' num2str(soy) ' sigma0_up = ' num2str(soz) ' ' xresult ' ' yresult ' ' zresult])
+        disp([stnm ' sigma0_north = ' sprintf('%f', sox) ' sigma0_east = ' sprintf('%f', soy) ' sigma0_up = ' sprintf('%f', soz) ' ' xresult ' ' yresult ' ' zresult])
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        % figure out which are outliers and which are not and put zeros in outliers vector
-        [~,oVx]=deleteoutliers(Vx, confidence);
-        [~,oVy]=deleteoutliers(Vy, confidence);
-        [~,oVz]=deleteoutliers(Vz, confidence);
-        outliers = true(size(Vx,1),1);
-        outliers(oVx) = 0; outliers(oVy) = 0; outliers(oVz) = 0; 
-        
         % pack everything in the cell array
-        oindex(i) = num2cell(outliers,1);
+        oindex(i) = num2cell(index,1);
         
-        weights(i) = num2cell([Px; Py; Pz],[1 2]);
+        weights(i) = num2cell([Px'; Py'; Pz'],[1 2]);
         etm(i,1) = num2cell([Cx'; Cy'; Cz'],[1 2]);
         etm(i,2) = num2cell(Ha,[1 2]);
         

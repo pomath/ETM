@@ -70,5 +70,5 @@ function plot_station(stnm, i, index, lat, lon, t, Ha, Cx, Cy, Cz, Lx, Ly, Lz)
     title({[stnm '(' num2str(i) '): \sigma_N = ' num2str(sigmaN) ' mm; \sigma_E = ' num2str(sigmaE) ' mm; \sigma_U = ' num2str(sigmaU) ' mm']; ['Outliers detected: ' num2str(sum(index == 0)) ' of ' num2str(size(index,1)) ' data points']},'FontSize',10)        
 
     % k = waitforbuttonpress;
-    print(h,'-dpng',['etm_fless/' stnm '_NEU.png'], '-r300')
+    print(h,'-dpng',['../ETM_files/etm/' stnm '_NEU.png'], '-r300')
 end
