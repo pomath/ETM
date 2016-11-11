@@ -2,12 +2,16 @@ function plot_etms(st_series, etm, start_at)
 
     % station counter
     if nargin == 3
-        i = structfind(st_series,'stnm',start_at);
+        if size(start_at,1) == 1
+            j = (structfind(st_series,'stnm',start_at):length(st_series))';
+        else
+            j = sort(start_at);
+        end
     else
-        i = 1;
+        j = (1:length(st_series))';
     end
 
-    while i <= size(st_series,2)
+    for i = j'
 
         % station name
         stnm = st_series(i).stnm;
@@ -35,7 +39,6 @@ function plot_etms(st_series, etm, start_at)
         
         plot_station(stnm, i, index, lat, lon, t, Ha, Cn, Ce, Cu, Ln, Le, Lu)
         
-        i = i + 1;
     end
 
 end

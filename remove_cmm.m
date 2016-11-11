@@ -20,9 +20,20 @@ function st_series_o = remove_cmm(st_series_r,poly,etm)
 
     A = [Ax; Ay; Az];
 
+    % get the oscilations from the etm structure
+    osc_x = [];
+    osc_y = [];
+    osc_z = [];
+    for i = 1:length(etm)
+        osc_x = [osc_x; etm{i,1}(1,end-3:end)];
+        osc_y = [osc_y; etm{i,1}(2,end-3:end)];
+        osc_z = [osc_z; etm{i,1}(3,end-3:end)];
+    end
+    
     for i = 1:4
-        % L has the parameters S1,C1,S2,C2
-        L = [osc_param(i,:)'; osc_param(i+4,:)'; osc_param(i+8,:)'];
+        
+        % L has the parameters S1,S2,C1,C2
+        L = [osc_x(:,i); osc_y(:,i); osc_z(:,i)];
         x = (A'*A)\(A'*L);
 
         % remove from each time series
@@ -31,26 +42,26 @@ function st_series_o = remove_cmm(st_series_r,poly,etm)
             case 1
                 t = sin(2*pi.*poly.epochs);
             case 2
-                t = cos(2*pi.*poly.epochs);
-            case 3
                 t = sin(4*pi.*poly.epochs);
+            case 3
+                t = cos(2*pi.*poly.epochs);
             case 4
                 t = cos(4*pi.*poly.epochs);
         end
 
         for j = 1:size(st_series_r,2)
-            st_series_o(j).x = st_series_o(j).x - (t(ismember(poly.epochs,st_series_r(j).epochs)).*mean(osc_param(i,:)))';
-            st_series_o(j).y = st_series_o(j).y - (t(ismember(poly.epochs,st_series_r(j).epochs)).*mean(osc_param(i+4,:)))';
-            st_series_o(j).z = st_series_o(j).z - (t(ismember(poly.epochs,st_series_r(j).epochs)).*mean(osc_param(i+8,:)))';
+            st_series_o(j).x = st_series_o(j).x - (t(ismember(poly.epochs,st_series_r(j).epochs)).*mean(osc_x(:,i)))';
+            st_series_o(j).y = st_series_o(j).y - (t(ismember(poly.epochs,st_series_r(j).epochs)).*mean(osc_y(:,i)))';
+            st_series_o(j).z = st_series_o(j).z - (t(ismember(poly.epochs,st_series_r(j).epochs)).*mean(osc_z(:,i)))';
 
             % get the amplitude of the rotational component
             a = x(1).*X(j);
             b = x(2).*Y(j);
             c = x(3).*Z(j);
 
-            st_series_o(j).x = st_series_o(j).x - (t(ismember(poly.epochs,st_series_r(j).epochs)).*a)';
-            st_series_o(j).y = st_series_o(j).y - (t(ismember(poly.epochs,st_series_r(j).epochs)).*b)';
-            st_series_o(j).z = st_series_o(j).z - (t(ismember(poly.epochs,st_series_r(j).epochs)).*c)';
+%             st_series_o(j).x = st_series_o(j).x - (t(ismember(poly.epochs,st_series_r(j).epochs)).*a)';
+%             st_series_o(j).y = st_series_o(j).y - (t(ismember(poly.epochs,st_series_r(j).epochs)).*b)';
+%             st_series_o(j).z = st_series_o(j).z - (t(ismember(poly.epochs,st_series_r(j).epochs)).*c)';
         end
     end
 end

@@ -4,10 +4,10 @@ function plot_station(stnm, i, index, lat, lon, t, Ha, Cx, Cy, Cz, Lx, Ly, Lz)
 
     ts = (min(t):1/365:max(t))';
     % build the A matrix for a complete time series
-    [A,~] = load_hsf3(stnm, ts, lat, Ha);
+    [A,~] = load_hsf3(stnm, ts, false, Ha);
 
     % get the A matrix using t instead of ts to calculate the STD
-    [Ai,~] = load_hsf3(stnm, t(index), lat, Ha);
+    [Ai,~] = load_hsf3(stnm, t(index), false, Ha);
 
     sigmaN = std(Lx(index) - Ai*Cx)*1000;
     sigmaE = std(Ly(index) - Ai*Cy)*1000;
@@ -39,7 +39,7 @@ function plot_station(stnm, i, index, lat, lon, t, Ha, Cx, Cy, Cz, Lx, Ly, Lz)
 
         plot(t,L-C(1),'ob','MarkerSize', 2,'MarkerFaceColor','b')
         % plot outliers in cyan
-        % plot(t(~index),L(~index),'oc','MarkerSize', 2,'MarkerFaceColor','c')
+        plot(t(~index),L(~index)-C(1),'oc','MarkerSize', 2,'MarkerFaceColor','c')
 
         M = A*C;
         plot(ts,M-C(1),'r','LineWidth',0.5);

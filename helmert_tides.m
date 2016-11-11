@@ -1,9 +1,11 @@
-function [st_series_o, etm] = helmert_tides(st_series, poly, st_info, etm, iter)
+function [st_series_o, etm] = helmert_tides(st_series, poly, st_info, etm, iter, stab_sites)
 
     X = poly.x;
     Y = poly.y;
     Z = poly.z;
     t = poly.epochs;
+    
+    confidence = 0.05;
     
     % numero de estaciones
     n = size(X,2);
@@ -25,7 +27,7 @@ function [st_series_o, etm] = helmert_tides(st_series, poly, st_info, etm, iter)
         for i = 1:e
             
             % identify outlier stations for this epoch
-            out = get_outliers(st_series,t(i));
+            out = get_outliers_stab(st_series,t(i),stab_sites);
             
             % matriz de diseño para cada componente
             Ax = [zeros(n,1) Z(i,:)' -Y(i,:)' repmat([1 0 0],n,1)];
@@ -47,12 +49,48 @@ function [st_series_o, etm] = helmert_tides(st_series, poly, st_info, etm, iter)
             A([out; out; out] == 0,:) = [];
             L([out; out; out] == 0,:) = [];
 
+            % build a unitary weights matrix
+            p = ones(size(L));
+            P = diag(p);
+            factor = 1;
+            
             % si el sistema esta sobredeterminado, resuelvo
             if size(A,1) > size(A,2)
 
                 % sin pesos por el momento
-                x = (A'*A)\(A'*L);
-
+                cst_pass = false;
+                while ~cst_pass
+                    [x, ~, So, V, ~, ~, cst_pass] = adjust_lsq(A,P,L,true(size(A,1),1),[],[]);
+                    
+                    % x = (A'*A)\(A'*L);
+                    
+                    % verify if the goodness of fit test was passed
+                    if ~cst_pass
+                        if So < 1
+                            % weights are too pesimistic, upweight by So%
+                            fprintf(char(hex2dec('25B2')));
+                        else
+                            % weights are too optimistic, downweight by So%
+                            fprintf(char(hex2dec('25BC')));
+                        end
+                        
+                        factor = factor*So;
+                        
+                        % determine the outliers
+                        [~,outliers]=deleteoutliers(V, confidence);
+                        % downweight them (x10)
+                        factor_outliers=ones(size(p));
+                        factor_outliers(outliers) = 10;
+                        fprintf(' >> outliers detected:')
+                        fprintf('%d ',outliers);
+                        fprintf('\n');
+                        % make the new P matrix
+                        P = diag(1./((p*factor.*factor_outliers).^2));
+                    end
+                end
+                disp(['Done t=' num2str(t(i))])
+                fprintf('\n');
+                
                 % make A again to include the all stations back (
                 A = [Ax; Ay; Az];
 

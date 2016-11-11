@@ -7,6 +7,8 @@ function [etm, oindex, weights] = auto_fit_xyz(st_series,st_info,start_at)
     % weights for the GPS data
     weights = cell(size(st_series,2),1);
     
+    confidence = 0.05;
+    
     % station counter
     if nargin == 3
         i = structfind(st_series,'stnm',start_at);
@@ -40,12 +42,13 @@ function [etm, oindex, weights] = auto_fit_xyz(st_series,st_info,start_at)
 
         % after taking to Mike, we don't need to use the formal errors from GAMIT, since they don't mean anything
         % so use unit weights and then update during iteration using sigma zero information
+        % DDG 10/11/2016: assign an a priori sigma for all observations
         px = ones(size(st_series(i).px));
         py = ones(size(st_series(i).px));
         pz = ones(size(st_series(i).px));
         
         % load the heavy-side functions and periodic terms
-        [A,Ha,constrains,adjcmp] = load_hsf3(stnm, t,true);
+        [A,Ha,constrains_h,constrains_s,adjcmp] = load_hsf3(stnm, t,true);
         
         if cond(A) > 1e3
             disp(['  >> Unstable system of equations for station: ' stnm '. It has been stabilized, but make sure to check the data and results.'])
@@ -61,16 +64,10 @@ function [etm, oindex, weights] = auto_fit_xyz(st_series,st_info,start_at)
                     p = pz; L = Lz;
             end
                 
-            % factor for downweight or upweight of P
-            % this is the factor for sigma zero, not for outliers
-            factor = 1;
-            % factor to downweight outliers
-            % start with ones, then we'll select the outliers and put larger values (10)
-            factor_outliers = 1;
-            
             % weights
-            P = diag(1./(p.^2));
-
+            P = diag(1./p.^2);
+            factor = 1;
+            
             % goodness of fit test
             cst_pass = false;
             % print current component
@@ -84,28 +81,38 @@ function [etm, oindex, weights] = auto_fit_xyz(st_series,st_info,start_at)
                 
                 % constrains tells the LSQ where to put the conditions equations to limit the behavior of the log decays and
                 % the antenna and co-seismic jumps
-                [C, S, So, V, r, dof, cst_pass] = adjust_lsq(A,P,L,index,constrains);
-                
+                [C, S, So, V, ~, dof, cst_pass] = adjust_lsq(A,P,L,index,constrains_h,constrains_s);
+
                 % verify if the goodness of fit test was passed
                 if ~cst_pass
                     if So < 1
-                        % weights are too pesimistic, upweight by So%
-                        factor = factor*So;
-                        fprintf('^');
+                        % weights are too pesimistic, just inform the user
+                        fprintf(char(hex2dec('25B2')));
                     else
-                        % weights are too optimistic, downweight by So%
-                        factor = factor*So;
-                        fprintf('v');
+                        % weights are too optimistic, just inform the user
+                        fprintf(char(hex2dec('25BC')));
                     end
                     
+                    factor = factor.*So;
+                    
                     % determine the outliers
-                    [~,outliers]=deleteoutliers(V, 0.01);
+                    [~,outliers]=deleteoutliers(V, confidence);
                     % downweight them (x10)
                     factor_outliers=ones(size(p));
                     factor_outliers(outliers) = 10;
                     % make the new P matrix
-                    P = diag(1./((p*factor.*factor_outliers).^2));
+                    P = diag(1./((factor.*factor_outliers).^2));
                 end
+                
+                % uncomment this block for debuging purposes
+%                 clf
+%                 scatter(t,L,30,abs(factor),'fill')
+%                 hold on
+%                 plot(t,A*C,'r')
+%                 colorbar
+%                 if ~isempty(outliers)
+%                    plot(t(outliers),L(outliers),'xr','MarkerSize',20)
+%                 end
             end
 
             % update the information
@@ -141,9 +148,9 @@ function [etm, oindex, weights] = auto_fit_xyz(st_series,st_info,start_at)
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         % figure out which are outliers and which are not and put zeros in outliers vector
-        [~,oVx]=deleteoutliers(Vx, 0.01);
-        [~,oVy]=deleteoutliers(Vy, 0.01);
-        [~,oVz]=deleteoutliers(Vz, 0.01);
+        [~,oVx]=deleteoutliers(Vx, confidence);
+        [~,oVy]=deleteoutliers(Vy, confidence);
+        [~,oVz]=deleteoutliers(Vz, confidence);
         outliers = true(size(Vx,1),1);
         outliers(oVx) = 0; outliers(oVy) = 0; outliers(oVz) = 0; 
         

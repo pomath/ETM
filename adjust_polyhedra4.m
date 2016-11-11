@@ -1,37 +1,45 @@
-% DDG: 12/06/2016
-% script para ajustar la marea terrestre utilizando el ETM y series de
-% tiempo GPS. Algunos comentarios están en inglés porque los archivos
-% provienen de scripts que vengo escribiendo para la doctorado.
+function adjust_polyhedra4(st_series,poly,stab_sites)
 
-%{
+    rm_stn = [];
+    for i = 1:size(st_series,2)
+        if size(st_series(i).epochs,2) < 50 | (max(st_series(2).epochs) - min(st_series(2).epochs)) < 1
+            rm_stn = [rm_stn; st_series(i).stnm];
+        end
+    end
 
-Run make_data() then this.
+    for i = 1:size(rm_stn,1)
+        [poly,st_series] = remove_stn(rm_stn(i,:), poly,st_series);
+    end
 
-%}
+    % find if there are any stab sites not present in the datasetz
+    stab_sites_i = zeros(size(stab_sites,1),1);
+    for i = 1:length(stab_sites)
+        index = structfind(st_series,'stnm',stab_sites(i,:));
+        if ~isempty(index)
+            stab_sites_i(i) = index;
+        end
+    end
+    stab_sites_i(stab_sites_i == 0) = [];
 
-function adjust_polyhedra4();
+    % fit etms and filter large outliers
+    % primera corrida de auto_fit_xyz busca datos que estén por afuera de 3
+    % sigma y los descarta para no deformar mucho la red durante el ajuste
+    [etm, index, weights] = auto_fit_xyz(st_series,st_info);
 
-% load the time series
-[poly,st_series] = load_polyhedra();
+    % actualizo las series de tiempo sacando las colas estadisticas
+    st_series = update_st_series(st_series,index,weights);
 
-% load the station info
-% el station info se usa para agregar saltos por cambios de equipo, antena,
-% etc.
-st_info = load_st_info('/home/pmatheny/scot/tables/station.info');
+    [st_series, etm] = helmert_tides(st_series, poly, st_info, etm, 4, stab_sites_i);
 
-% fit etms and filter large outliers
-% primera corrida de auto_fit_xyz busca datos que estén por afuera de 3
-% sigma y los descarta para no deformar mucho la red durante el ajuste
-[etm, index, weights] = auto_fit_xyz(st_series,st_info);
+    for i = 1:4
+        st_series_o = remove_cmm(st_series,poly,etm);
+        [etm, index, weights] = auto_fit_xyz(st_series_o,st_info);
+    end
 
-% actualizo las series de tiempo sacando las colas estadisticas
-st_series = update_st_series(st_series,index,weights);
+    plot_etms(st_series, etm)
 
-% [st_series, etm] = helmert_tides(st_series, poly, st_info, etm, 4);
+    % save('st_series/st_series.mat','st_series');
+    % save('st_series/etm.mat','etm');
+    % save('st_series/poly.mat','poly');
 
-plot_etms(st_series, etm)
-
-save('st_series/st_series.mat','st_series');
-save('st_series/etm.mat','etm');
-save('st_series/poly.mat','poly');
 end

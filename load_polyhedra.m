@@ -32,13 +32,13 @@ function [poly,st_series] = load_polyhedra()
     eesum = [];
     
     % load the time series files
-    files=dir('series_new/*.txt');
+    files=dir('series/*.txt');
 
     ss=size(st_series,2);
     for i = 1:size(files,1)
         % los archivos de las series de tiempo son construidos por
         % make_data(v) v = version
-        fileID = fopen(['/home/pmatheny/scripts/series_new/' files(i).name],'r');
+        fileID = fopen(['series/' files(i).name],'r');
 
         disp(files(i).name)
         
@@ -75,8 +75,8 @@ function [poly,st_series] = load_polyhedra()
         z = stations{11}';
 
         [lat, lon, ~] = ecef2lla(x(1), y(1), z(1));
-        st_series(1,i).lat = lat;
-        st_series(1,i).lon = lon;
+        st_series(1,i).lat = lat*180/pi;
+        st_series(1,i).lon = lon*180/pi;
     end
 
     % la estructura de los poliedros es un poco diferente, dado que aunque

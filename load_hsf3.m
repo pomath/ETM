@@ -1,4 +1,4 @@
-function [A, Ha] = load_hsf3(stnm, t, lat, Hi)
+function [A, Ha, constrains_h, constrains_s, adjcmp] = load_hsf3(stnm, t, inversion, Hi)
     % this function builds the design matrix A using the information
     % provided by the H and E files
     
@@ -12,7 +12,7 @@ function [A, Ha] = load_hsf3(stnm, t, lat, Hi)
     [~,ite] = max(t);
 
     % require at least more than 2 data points to calculate!
-    if ite - its > 1
+    if ite - its > 0
         % determine the start of this sections of time series
         Tr = t(its);
 
@@ -25,42 +25,60 @@ function [A, Ha] = load_hsf3(stnm, t, lat, Hi)
         s = [sin(2*pi*t) sin(4*pi*t) cos(2*pi*t) cos(4*pi*t)];
         
         a = [];
-
+        
         if ~isempty(Ha)
             % reorder Ha
             Ha = sortrows(Ha,1);
-            % sparate log decays from jumps
-            % Ht has both the decays and jumps to find the offset
-            Ht = Ha;
-
+            
+            % remove jumps (no log decay) before and after the time
+            % limits. Those don't influence the design matrix
+            Ha(Ha(:,2) == 0 & (Ha(:,1) <= t(its) | Ha(:,1) >= t(ite)),:) = [];
+            
+            % remove any log decays that happened after the t(ite)
+            Ha(Ha(:,2) ~= 0 & Ha(:,1) >= t(ite),:) = [];
+            
+            % log decays < t(its) are more complicated. There are a few
+            % possibilities:
+            % 1) The jump happened before the data started, but the decay
+            % will continue. The decay needs to be added but not the jump
+            % 2) Idem before but the decay is stopped by another decay that
+            % happened < t(its) => remove all together
+            
+            % find the min(t(its) - t_decay) but limit the search to Ha <= t(its) and ...
+            min_Hl = min(t(its) - Ha(Ha(:,2) ~= 0 & Ha(:,1) <= t(its)),1);
+            if ~isempty(min_Hl)
+                % remove everything < than this value
+                Ha(Ha(:,2) ~= 0 & Ha(:,1) < min_Hl,:) = [];
+            end
+            
             % heavy side functions
-            ht = zeros(size(t,1),size(Ht,1));
+            ht = zeros(size(t,1),size(Ha,1));
             
             % loop through the heaviside functions
-            for i = 1:size(Ht,1)
+            for i = 1:size(Ha,1)
                 % check when it starts
-                if Ht(i,1) > t(its) & Ht(i,1) < t(ite)
+                % the jump has to be within t(its) and t(ite) to get a jump
+                if Ha(i,1) > t(its) & Ha(i,1) < t(ite)
                     % inside time window, put ones
-                    ht(:,i) = (t >= Ht(i,1));
+                    ht(:,i) = (t >= Ha(i,1));
 
                     % if 2 or more jumps happen inside a gap, the (t >= Ht(i,1))
                     % will return identical columns creating a singular matrix.
                     % Verify that the new column is different than the rest
                     if i > 1
-                        % if a previous jump exists with less than 3 data points
+                        % if a previous jump exists with less than 2 data points
                         % to constrain it, remove it
                         for j = 1:(i-1)
-                            if sum(xor(ht(:,j),ht(:,i))) < 3
-                                % identical columns! remove one
+                            % compare col j with col i
+                            if sum(xor(ht(:,j),ht(:,i))) < 2
+                                % identical columns! remove the previous one (only
+                                % different by 2 elements)
                                 ht(:,j) = 0;
                                 % remove the item from the Ha list
                                 Ha(j,:) = 0;
                             end
                         end
                     end
-                else
-                    % no matching data: remove the item from the Ha list
-                    Ha(i,:) = 0;
                 end
             end
             
@@ -76,13 +94,18 @@ function [A, Ha] = load_hsf3(stnm, t, lat, Hi)
                     % if a previous decay exists, stop it
                     for j = 1:(i-1)
                         hl(t >= Hl(i,1),j) = 0;
-                        % find the index of this jump in Ha
-                        k = find(Ha(:,1) == Hl(j,1));
-                        
-                        if sum(hl(:,j)) == 0 & Ha(k,1) ~= 0
-                            % all zeros. Remove from Ha to keep
-                            % compatibility with full time serie (ts) vs
-                            % actual measured epochs
+                        if sum(hl(:,j)) == 0
+                            % if the col j is all zeros, remove this log
+                            % decay (probably no data to constrain it)
+                            % remove also from Ha. This is because the
+                            % inversion will not constrain this decay and
+                            % when we call load_hsf3 with a full time
+                            % vector (named ts) it will try to put it and
+                            % we'll end with one more column than
+                            % parameters in the inversion.
+                            
+                            % find the index of this jump in Ha
+                            k = Ha(:,1) == Hl(j,1);
                             Ha(k,:) = 0;
                         end
                     end
@@ -100,6 +123,15 @@ function [A, Ha] = load_hsf3(stnm, t, lat, Hi)
         end
         
         A = [c v a ht hl s];
+        if inversion == true
+            % add some constrains to the A matrix to stabilize the
+            % inversion of the log decays and jumps
+            % constrains = [zeros(size([ht hl],2),size([c v a],2)) diag(ones(size([ht hl],2),1)) zeros(size([ht hl],2),size(s,2))];
+            constrains_h = [zeros(size([ht hl],2),size([c v a],2)) diag(ones(size([ht hl],2),1)) zeros(size([ht hl],2),size(s,2))];
+            constrains_s = [zeros(size(s,2),size([c v a ht hl],2)) diag(ones(size(s,2),1))];
+        end
+        
+        adjcmp = [size(c,2) size(v,2) size(a,2) size(ht,2) size(hl,2) size(s,2)];
     end
 end
 
