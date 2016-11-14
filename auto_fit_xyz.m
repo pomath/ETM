@@ -75,11 +75,11 @@ function [etm, oindex, weights] = auto_fit_xyz(st_series,st_info,start_at)
             % update the information
             switch comp
                 case 1
-                    Cx = C; Sx = S; sox = So; Vx = V; Px = p; xresult = cst_pass;
+                    Cx = C; Sx = S; sox = So; Vx = V; Px = p; xresult = cst_pass; index_x = index;
                 case 2
-                    Cy = C; Sy = S; soy = So; Vy = V; Py = p; yresult = cst_pass;
+                    Cy = C; Sy = S; soy = So; Vy = V; Py = p; yresult = cst_pass; index_y = index;
                 case 3
-                    Cz = C; Sz = S; soz = So; Vz = V; Pz = p; zresult = cst_pass;
+                    Cz = C; Sz = S; soz = So; Vz = V; Pz = p; zresult = cst_pass; index_z = index;
             end
         end
         
@@ -88,7 +88,7 @@ function [etm, oindex, weights] = auto_fit_xyz(st_series,st_info,start_at)
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         % pack everything in the cell array
-        oindex(i) = num2cell(index,1);
+        oindex(i) = num2cell(index_x & index_y & index_z ,1);
         
         weights(i) = num2cell([Px'; Py'; Pz'],[1 2]);
         etm(i,1) = num2cell([Cx'; Cy'; Cz'],[1 2]);

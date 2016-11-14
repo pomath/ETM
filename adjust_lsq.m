@@ -62,7 +62,7 @@ function [C, S, So, V, r, dof, cst_pass, sigma, index] = adjust_lsq(Ai,Pi,Li,con
         % find the a priori sigma for the observations
         factor = factor.*So;
         % find how many sigmas away the outliers are
-        s = V./factor;
+        s = abs(V./factor);
             
         % careful! This function returns the opposite value of alpha as on
         % Leick, page 143
@@ -83,6 +83,7 @@ function [C, S, So, V, r, dof, cst_pass, sigma, index] = adjust_lsq(Ai,Pi,Li,con
             
             % reweigh by Mike's method of equal weight until 2 sigma
             f = ones(size(V));
+            
             f(s > limit) = 1./(10.^(limit - s(s > limit)));
             % do not allow sigmas > 100 m, which is basicaly not putting
             % the observation in. Otherwise, due to a model problem

@@ -5,8 +5,6 @@ function [st_series_o, etm] = helmert_stacking(st_series, poly, st_info, etm, it
     Z = poly.z;
     t = poly.epochs;
     
-    confidence = 0.05;
-    
     % numero de estaciones
     n = size(X,2);
     % numero de epocas
@@ -64,8 +62,12 @@ function [st_series_o, etm] = helmert_stacking(st_series, poly, st_info, etm, it
                     cst_pass = 'NOT PASS';
                 end
                 
-                fprintf('%f (%f: %s) >> outliers detected: ',t(i), So, cst_pass)
-                fprintf('%d ', find(index == 0))
+                if sqrt(x(4).^2 + x(5).^2 + x(6).^2) > 0.003;
+                    fprintf('\n %4.3f (%3.2f: %s) trans (mm): [%+4.3f %+4.3f %+4.3f] >> outliers detected: ',t(i), So, cst_pass,x(4).*1000,x(5).*1000,x(6).*1000)
+                    fprintf('%d ', find(index == 0))    
+                else
+                    fprintf('\n %4.3f (%3.2f: %s)',t(i), So, cst_pass)
+                end
                 fprintf('\n')
                 
                 % make A again to include the all stations back (

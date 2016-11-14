@@ -1,17 +1,22 @@
-function plot_station(stnm, i, index, lat, lon, t, Ha, Cx, Cy, Cz, Lx, Ly, Lz)
+function plot_station(stnm, i, index, lat, lon, t, Ha, Cx, Cy, Cz, Lx, Ly, Lz, sx, sy, sz)
 
     display(['Plotting ' stnm '...'])
 
     ts = (min(t):1/365:max(t))';
     % build the A matrix for a complete time series
+    % A is used to plot the red line
     [A,~] = load_hsf3(stnm, ts, false, Ha);
 
     % get the A matrix using t instead of ts to calculate the STD
-    [Ai,~] = load_hsf3(stnm, t(index), false, Ha);
+    [Ai,~] = load_hsf3(stnm, t, false, Ha);
 
-    sigmaN = std(Lx(index) - Ai*Cx)*1000;
-    sigmaE = std(Ly(index) - Ai*Cy)*1000;
-    sigmaU = std(Lz(index) - Ai*Cz)*1000;
+    % compute the WRMS for this site
+    s = Lx - Ai*Cx;
+    sigmaN = sqrt(sum(s.^2.*sx')./sum(sx))*1000;
+    s = Ly - Ai*Cy;
+    sigmaE = sqrt(sum(s.^2.*sy')./sum(sy))*1000;
+    s = Lz - Ai*Cz;
+    sigmaU = sqrt(sum(s.^2.*sz')./sum(sz))*1000;
     
     % remove rows of zeros
     r = ~all(A == 0,2);

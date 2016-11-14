@@ -27,6 +27,10 @@ function plot_etms(st_series, etm, start_at)
         Ly = (st_series(i).y);
         Lz = (st_series(i).z);
         
+        sx = st_series(i).px;
+        sy = st_series(i).py;
+        sz = st_series(i).pz;
+        
         % ETM parameters
         Ha = etm{i,2};
         C = etm{i,1};
@@ -37,7 +41,7 @@ function plot_etms(st_series, etm, start_at)
         [Cn,Ce,Cu] = ct2lg(Cx',Cy',Cz',lat*pi/180,lon*pi/180);
         [Ln,Le,Lu] = ct2lg(Lx',Ly',Lz',lat*pi/180,lon*pi/180);
         
-        plot_station(stnm, i, index, lat, lon, t, Ha, Cn, Ce, Cu, Ln, Le, Lu)
+        plot_station(stnm, i, index, lat, lon, t, Ha, Cn, Ce, Cu, Ln, Le, Lu, sx, sy, sz)
         
     end
 
