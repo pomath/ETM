@@ -1,15 +1,92 @@
 clear all
 clc
 
-[poly,st_series] = load_polyhedra();
+[poly,st_series] = load_polyhedra('../ETM_files/series');
 
 % load the station info
-st_info = load_st_info('../tables/station.info');
+st_info = load_st_info('../tables/station.info.new');
 
-stab_sites = load_stab_sites('../tables/stab_sites.txt');
+[stab_sites,stab_sites_i] = load_stab_sites(st_series,'../tables/stab_sites.txt');
 
-adjust_polyhedra(st_series,poly,st_info,stab_sites)
+adjust_polyhedra(st_series,poly,st_info,stab_sites_i)
 
-% save('st_series/st_series.mat','st_series');
-% save('st_series/etm.mat','etm');
-% save('st_series/poly.mat','poly');
+% plot the stabilization sites
+load('../ETM_files/st_series/stab_sites_i.mat');
+load('../ETM_files/st_series/st_series.mat');
+load('../ETM_files/st_series/etm.mat');
+
+plot_etms(st_series, etm, 'etm')
+
+% plot the stab_sites
+clf
+subplot(5,2,[1 2 3 4 5 6])
+m_proj('mercator')
+m_coast();
+hold on
+lon=[st_series(stab_sites_i).lon]';
+lon(lon > 180) = lon(lon > 180) - 360;
+lat=[st_series(stab_sites_i).lat]';
+m_plot(lon,lat,'or');
+
+% plot the rotation-translation history
+load('../ETM_files/st_series/rot_hist.mat')
+poly = create_poly_struct(st_series);
+colores=lines(size(rot_hist,2));
+
+for i = 1:size(rot_hist,2)
+    rs=[rot_hist{:,i}];
+
+    subplot(5,2,7)
+    plot(rs(1,:),rs(5,:),'color',colores(i,:))
+    hold on
+    title('Scale factor')
+
+    subplot(5,2,8)
+    plot(rs(1,:),rs(6,:),'color',colores(i,:))
+    hold on
+    title('X translation')
+
+    subplot(5,2,9)
+    plot(rs(1,:),rs(7,:),'color',colores(i,:))
+    hold on
+    title('Y translation')
+
+    subplot(5,2,10)
+    plot(rs(1,:),rs(8,:),'color',colores(i,:))
+    hold on
+    title('Z translation')
+end
+
+figure
+clf
+yticks = [];
+for i = 1:size(stab_sites_i,1)
+    t=[st_series(stab_sites_i(i)).epochs]';
+    
+    Ha=etm{stab_sites_i(i),2};
+    if ~isempty(Ha)
+        if ~isempty(min(Ha(Ha(:,2) ~= 0,1)))
+            tp = t(t >= min(Ha(Ha(:,2) ~= 0,1)));
+
+            post=plot(tp,repmat(i,[size(tp,1) 1]),'or','MarkerFaceColor','r','MarkerSize',2);
+
+            hold on
+
+            ti = t(t < min(Ha(Ha(:,2) ~= 0,1)));
+            plot(ti,repmat(i,[size(ti,1) 1]),'ob','MarkerFaceColor','b','MarkerSize',2)
+        else
+            inter=plot(t,repmat(i,[size(t,1) 1]),'ob','MarkerFaceColor','b','MarkerSize',2);
+        end
+    else
+        inter=plot(t,repmat(i,[size(t,1) 1]),'ob','MarkerFaceColor','b','MarkerSize',2);
+    end
+    
+    yticks=[yticks; st_series(stab_sites_i(i)).stnm];
+end
+
+set(gca,'YTick',1:size(stab_sites_i,1),'YTickLabel',yticks)
+set(gca,'FontSize',6,'FontName','courier')
+grid on
+
+legend([inter post],'Inter-seismic','Post-seismic')
+title('Stabilization sites history','FontSize',14)

@@ -6,7 +6,8 @@ function [] = check_files(stnm,st_info,lat,lon)
     th = [];
     if ~exist(['../ETM_files/stations/H_' stnm '.txt'], 'file')
         % find the antenna changes in the station info file
-        idx = structfind(st_info,'stnm',stnm);
+        %idx = structfind(st_info,'stnm',stnm);
+        idx = find(strcmp({st_info.stnm}, stnm)==1);
         atx_H = [];
         if ~isempty(idx)
             atx_sdate = [st_info(idx).sdate];
@@ -49,9 +50,10 @@ function [] = check_files(stnm,st_info,lat,lon)
         
         edate = datevec(datenum(strrep(strrep(events{1},'T',' '),'Z', ''),'yyyy-mm-dd HH:MM:ss.FFF'));
         
-        for i = 1:size(edate,1)
-            [doy(i,1),fyear(i,1)] = date2doy(datenum(sprintf('%d/%d/%d %d:00',edate(i,3),edate(i,2),edate(i,1),edate(i,4))));
-        end        
+        %for i = 1:size(edate,1)
+            %[doy(i,1),fyear(i,1)] = date2doy(datenum(sprintf('%d/%d/%d %d:00',edate(i,3),edate(i,2),edate(i,1),edate(i,4))));
+        %end        
+        fyear = date2fyear(edate(:,1),edate(:,2),edate(:,3),edate(:,4)+edate(:,5)./60+edate(:,6)./3600);
         
         evinfo = [fyear edepth edist mw S];
         evinfo = sortrows(evinfo,1);

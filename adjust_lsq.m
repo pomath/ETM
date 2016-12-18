@@ -32,21 +32,29 @@ function [C, S, So, V, r, dof, cst_pass, sigma, index] = adjust_lsq(Ai,Pi,Li,con
     % to stabilize the inversion, add the conditions equations
     sc = size(constrains,1);
     A = [A; constrains];
-    L = [L; zeros(sc,1)];
+    L = [L; zeros(sc,1)];    
+
+    sp = size(P,1);
+    Pi = P;
+
+    if sc > 0
+        % resize P to put the ones for the constrains
+        % this avoids resizing P on every iteration (speed gain)
+        P(sp+1:sp+sc,sp+1:sp+sc) = diag(ones(sc,1));
+    end
     
     cst_pass = false;
     iter = 0;
     factor = 1;
     
     while ~cst_pass & iter <= 10
+        
         % REBUILD the P matrix. Inside the loop to reweigh after adjustment
-        sp = size(P,1);
         if sc > 0
-            for i=1:sc
-                P(sp+i,sp+i) = 1;
-            end
+            P(1:sp,1:sp) = Pi;
+        else
+            P = Pi;
         end
-
         % invert for the parameters
         C = (A'*P*A)\A'*P*L;
 
@@ -90,17 +98,17 @@ function [C, S, So, V, r, dof, cst_pass, sigma, index] = adjust_lsq(Ai,Pi,Li,con
             % (missing jump, etc) you end up with very unstable inversions
             f(f > 100) = 100;
             
-            P = diag(1./((factor.*f).^2));
-            Pi = P;
+            Pi = diag(1./((factor.*f).^2));
         else
             cst_pass = true;
         end
         
         iter = iter + 1;
+        
     end
     
     %%%%%%%%%%%% statistics %%%%%%%%%
-    S = inv(Ai'*Pi*Ai);
+    S = 1\(Ai'*Pi*Ai);
     sigma = diag(1./sqrt(Pi));
     
     % mark observations with sigma > limit

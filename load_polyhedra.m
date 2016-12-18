@@ -1,4 +1,4 @@
-function [poly,st_series] = load_polyhedra()
+function [poly,st_series] = load_polyhedra(folder)
     % function to load the GPS polyhedra and GPS time series
     %   it returns 2 structures:
     %       poly: the structure with the epochs and XYZ coordinates
@@ -32,13 +32,13 @@ function [poly,st_series] = load_polyhedra()
     eesum = [];
     
     % load the time series files
-    files=dir('../ETM_files/series/*.txt');
+    files=dir([folder '/*.txt']);
 
     ss=size(st_series,2);
     for i = 1:size(files,1)
         % los archivos de las series de tiempo son construidos por
         % make_data(v) v = version
-        fileID = fopen(['../ETM_files/series/' files(i).name],'r');
+        fileID = fopen([folder '/' files(i).name],'r');
 
         disp(files(i).name)
         
@@ -48,9 +48,7 @@ function [poly,st_series] = load_polyhedra()
         if size(stations{9}',2) == 0
             disp 'stop'
         end
-        % save the epochs in a separate variable to use later
-        eesum = [eesum; stations{2}];
-        
+       
         st_series(1,i).stnm = files(i).name(1:4);
         st_series(1,i).epochs = stations{2}';
         % all indexes used (no knowledge of outliers)
@@ -76,31 +74,35 @@ function [poly,st_series] = load_polyhedra()
 
         [lat, lon, ~] = ecef2lla(x(1), y(1), z(1));
         st_series(1,i).lat = lat*180/pi;
-        st_series(1,i).lon = lon*180/pi;
+        if lon*180/pi > 180
+            lon=lon*180/pi-360;
+        else
+            lon=lon*180/pi;
+        end
+        st_series(1,i).lon = lon;
+        
+        if ~isempty(x == 0) | ~isempty(y == 0) | ~isempty(z == 0)
+            % remove nonsense values
+            st_series(1,i).x(x == 0 | y == 0 | z == 0) = [];
+            st_series(1,i).y(x == 0 | y == 0 | z == 0) = [];
+            st_series(1,i).z(x == 0 | y == 0 | z == 0) = [];
+            st_series(1,i).px(x == 0 | y == 0 | z == 0) = [];
+            st_series(1,i).py(x == 0 | y == 0 | z == 0) = [];
+            st_series(1,i).pz(x == 0 | y == 0 | z == 0) = [];
+            st_series(1,i).pn(x == 0 | y == 0 | z == 0) = [];
+            st_series(1,i).pe(x == 0 | y == 0 | z == 0) = [];
+            st_series(1,i).pd(x == 0 | y == 0 | z == 0) = [];
+            st_series(1,i).n(x == 0 | y == 0 | z == 0) = [];
+            st_series(1,i).e(x == 0 | y == 0 | z == 0) = [];
+            st_series(1,i).d(x == 0 | y == 0 | z == 0) = [];
+            st_series(1,i).epochs(x == 0 | y == 0 | z == 0) = [];
+            st_series(1,i).index(x == 0 | y == 0 | z == 0) = [];
+        end
     end
 
     % la estructura de los poliedros es un poco diferente, dado que aunque
     % no haya datos para una epoca, los vectores deben tener todos el mismo
     % tamaño.
-    
-    % build the polyhedra structure
-    poly.epochs = sortrows(unique(eesum));
-    % make a vector for coordinates (rows time, cols station
-    poly.x = nan(size(poly.epochs,1),size(st_series,2));
-    poly.y = nan(size(poly.epochs,1),size(st_series,2));
-    poly.z = nan(size(poly.epochs,1),size(st_series,2));
-    poly.px = nan(size(poly.epochs,1),size(st_series,2));
-    poly.py = nan(size(poly.epochs,1),size(st_series,2));
-    poly.pz = nan(size(poly.epochs,1),size(st_series,2));
-    % use the poly.epochs vector to sort the time series into polyhedra
-    for i = 1:size(st_series,2)
-        c = ismember(poly.epochs,st_series(i).epochs);
-        poly.x(c,i) = st_series(i).x;
-        poly.y(c,i) = st_series(i).y;
-        poly.z(c,i) = st_series(i).z;
-        poly.px(c,i) = st_series(i).px;
-        poly.py(c,i) = st_series(i).py;
-        poly.pz(c,i) = st_series(i).pz;
-    end
+    poly = create_poly_struct(st_series);
     
 end

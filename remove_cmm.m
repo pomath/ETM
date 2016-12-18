@@ -1,34 +1,47 @@
-function st_series_o = remove_cmm(st_series_r,poly,etm)
+function st_series_o = remove_cmm(st_series_r,etm)
     % remove common mode
     % each station has an XYZ coordinate and S1,C1,S2,C2 parameter
     % want to find the rotation and translation that minimizes S1,C1,S2,C2
-
-    st_series_o = st_series_r;
+    
+    % rebuild the poly structure to eliminate possible epochs removed by
+    % helmert_stacking
+    poly = create_poly_struct(st_series_r);
     
     X = []; Y = []; Z = [];
+    osc_x = []; osc_y = []; osc_z = [];
     % loop through the stations and get one coordinate for each one
     for i = 1:size(st_series_r,2)
+        % use 50% of data presence in check_stn_data
+        if ~isempty(etm{i,1}) & check_stn_data(st_series_r(i).epochs,0.5)
+            osc_x = [osc_x; etm{i,1}(1,end-3:end)];
+            osc_y = [osc_y; etm{i,1}(2,end-3:end)];
+            osc_z = [osc_z; etm{i,1}(3,end-3:end)];
+            index(i) = 1;
+        else
+            index(i) = 0;
+        end
+        % get a mean value for all stations, even if it doesn't have an etm
         X(1,i) = mean(st_series_r(i).x);
         Y(1,i) = mean(st_series_r(i).y);
         Z(1,i) = mean(st_series_r(i).z);
     end
-
+    
+    index = logical(index);
+    
+    n = size(X,2);
+    
     % build the design matrix
-    Ax = [zeros(size(poly.x,2),1) Z' -Y'];
-    Ay = [-Z' zeros(size(poly.x,2),1) X'];
-    Az = [Y' -X' zeros(size(poly.x,2),1)];
+    Ax = [zeros(n,1) -Z' Y' repmat([1 0 0],n,1)];
+    Ay = [Z' zeros(n,1) -X' repmat([0 1 0],n,1)];
+    Az = [-Y' X' zeros(n,1) repmat([0 0 1],n,1)];
 
     A = [Ax; Ay; Az];
-
-    % get the oscilations from the etm structure
-    osc_x = [];
-    osc_y = [];
-    osc_z = [];
-    for i = 1:length(etm)
-        osc_x = [osc_x; etm{i,1}(1,end-3:end)];
-        osc_y = [osc_y; etm{i,1}(2,end-3:end)];
-        osc_z = [osc_z; etm{i,1}(3,end-3:end)];
-    end
+    Ai = [Ax; Ay; Az];
+    
+    % remove the stations with no ETM
+    A([index'; index'; index'] == 0,:) = [];
+    
+    rt = [poly.x poly.y poly.z];
     
     for i = 1:4
         
@@ -40,29 +53,18 @@ function st_series_o = remove_cmm(st_series_r,poly,etm)
         % the translation part has to be directly removed from the time series
         switch i
             case 1
-                t = sin(2*pi.*poly.epochs);
+                t = repmat(sin(2*pi.*poly.epochs),1,size(poly.x,2));
             case 2
-                t = sin(4*pi.*poly.epochs);
+                t = repmat(sin(4*pi.*poly.epochs),1,size(poly.x,2));
             case 3
-                t = cos(2*pi.*poly.epochs);
+                t = repmat(cos(2*pi.*poly.epochs),1,size(poly.x,2));
             case 4
-                t = cos(4*pi.*poly.epochs);
+                t = repmat(cos(4*pi.*poly.epochs),1,size(poly.x,2));
         end
-
-        for j = 1:size(st_series_r,2)
-            st_series_o(j).x = st_series_o(j).x - (t(ismember(poly.epochs,st_series_r(j).epochs)).*mean(osc_x(:,i)))';
-            st_series_o(j).y = st_series_o(j).y - (t(ismember(poly.epochs,st_series_r(j).epochs)).*mean(osc_y(:,i)))';
-            st_series_o(j).z = st_series_o(j).z - (t(ismember(poly.epochs,st_series_r(j).epochs)).*mean(osc_z(:,i)))';
-
-            % get the amplitude of the rotational component
-            a = x(1).*X(j);
-            b = x(2).*Y(j);
-            c = x(3).*Z(j);
-
-%             st_series_o(j).x = st_series_o(j).x - (t(ismember(poly.epochs,st_series_r(j).epochs)).*a)';
-%             st_series_o(j).y = st_series_o(j).y - (t(ismember(poly.epochs,st_series_r(j).epochs)).*b)';
-%             st_series_o(j).z = st_series_o(j).z - (t(ismember(poly.epochs,st_series_r(j).epochs)).*c)';
-        end
+        % remove the common mode for this component
+        rt = rt - [t t t].*repmat((Ai*x)',size(t,1),1);
     end
+       
+    st_series_o = load_poly2series(st_series_r,rt,[]);
 end
 

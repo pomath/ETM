@@ -45,9 +45,9 @@ function [A, Ha, constrains_h, constrains_s, adjcmp] = load_hsf3(stnm, t, invers
             % happened < t(its) => remove all together
             
             % find the min(t(its) - t_decay) but limit the search to Ha <= t(its) and ...
-            min_Hl = min(t(its) - Ha(Ha(:,2) ~= 0 & Ha(:,1) <= t(its)),1);
+            min_Hl = t(its) - min(t(its) - Ha(Ha(:,2) ~= 0 & Ha(:,1) <= t(its)));
             if ~isempty(min_Hl)
-                % remove everything < than this value
+                % remove everything < than t(its) - min(t(its) - t_decay)
                 Ha(Ha(:,2) ~= 0 & Ha(:,1) < min_Hl,:) = [];
             end
             

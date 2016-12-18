@@ -18,10 +18,6 @@ function [st_series_o]= load_poly2series(st_series,Lr,del_epochs)
         st_series_o(i).y(isnan(st_series_o(i).y)) = [];
         st_series_o(i).z(isnan(st_series_o(i).z)) = [];
         
-
-        if strcmp(st_series(i).stnm,'BOGT')
-            disp(st_series(i).stnm)            
-        end
         st_series_o(i).px(ismember(st_series_o(i).epochs,del_epochs)) = [];
         st_series_o(i).py(ismember(st_series_o(i).epochs,del_epochs)) = [];
         st_series_o(i).pz(ismember(st_series_o(i).epochs,del_epochs)) = [];

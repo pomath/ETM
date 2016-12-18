@@ -1,51 +1,42 @@
-function [doy,fraction] = date2doy(inputDate)
-%DATE2DOY  Converts the date to decimal day of the year.
-%   [doy,fraction] = date2doy(inputDate)
+function [doy,fyear]= date2doy(y,m,d,h)
+%date2doy date to day of year (DOY)
 %
-%   Descriptions of Input Variables:
-%   inputDate:  Input date as a MATLAB serial datenumber
+% USAGE:       doy= date2doy(y,m,d)
 %
-%   Descriptions of Output Variables:
-%   doy: Decimal day of the year. For instance, an output of 1.5 would 
-%       indicate that the time is noon on January 1.
-%   fraction: Outputs the fraction of a year that has elapsed by the input
-%       date.
+%             [doy,fyear]= date2doy(y,m,d,h)
 %
-%   Example(s):
-%   >> [doy,frac] = date2doy(datenum('1/25/2004'));
+% INPUT
+%      y       year (integer)
+%      m       month (integer)
+%      d       day of month (integer)
+%      h       hour of day (real number in range 0 - 24)
 %
-%   See also:
+% OUTPUT
+%    doy       day of year (integer)
+%  fyear       year and fractional part of year
+%              
+% Note: fyear is fractional year under the assumption that
+% the year has 365 days, except for leap years with 366 days,
+% and therefore constitutes a non-uniform measure of duration.
+%
+% See also function doy2date
 
-% Author: Anthony Kendall
-% Contact: anthony [dot] kendall [at] gmail [dot] com
-% Created: 2008-03-11
-% Copyright 2008 Michigan State University.
-
-%Want inputs in rowwise format
-[doy,fraction] = deal(zeros(size(inputDate)));
-inputDate = inputDate(:);
-
-%Parse the inputDate
-[dateVector] = datevec(inputDate);
-
-%Set everything in the date vector to 0 except for the year
-dateVector(:,2:end) = 0;
-dateYearBegin = datenum(dateVector);
-
-%Calculate the day of the year
-doyRow = inputDate - dateYearBegin;
-
-%Optionally, calculate the fraction of the year that has elapsed
-flagFrac = (nargout==2);
-if flagFrac
-    %Set the date as the end of the year
-    dateVector(:,1) = dateVector(:,1) + 1;
-    dateYearEnd = datenum(dateVector);
-    fracRow = (doyRow - 1) ./ (dateYearEnd - dateYearBegin);
+lday=  [31 59 90 120 151 181 212 243 273 304 334 365]; 
+if rem(y,4)==0     % it is a leap year
+    lday(2:12)=lday(2:12)+1;
 end
 
-%Fill appropriately-sized output array
-doy(:) = doyRow;
-if flagFrac
-    fraction(:) = fracRow;
+if m==1
+    doy=d;
+else
+    doy=lday(m-1)+d;
 end
+if nargin<4
+    h=0;
+end
+    
+if nargout==2
+    fyear=yyddd2fyear(y,doy,h);
+end
+
+        
