@@ -22,4 +22,5 @@ function [st_series,etm] = adjust_polyhedra(st_series,poly,st_info,stab_sites_i)
     save('../ETM_files/st_series/st_series.mat','st_series');
     save('../ETM_files/st_series/etm.mat','etm');
     save('../ETM_files/st_series/stab_sites_i.mat','stab_sites_i');
+    save('../ETM_files/st_series/st_info.mat','st_info');
 end

@@ -2,7 +2,7 @@ function plot_station(stnm, i, index, lat, lon, t, Ha, Cx, Cy, Cz, Lx, Ly, Lz, s
 
     display(['Plotting ' stnm '...'])
 
-    ts = (min(t):1/365:max(t))';
+    ts = make_t_vector(min(t),max(t));
     % build the A matrix for a complete time series
     % A is used to plot the red line
     [A,~] = load_hsf3(stnm, ts, false, Ha);
